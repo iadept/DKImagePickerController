@@ -321,6 +321,16 @@ open class DKImageAssetExporter: DKImageBaseManager {
         }
     }
     
+    private func isJPEG(with imageData: Data) -> Bool {
+        if imageData.count >= 12, imageData.starts(with: [255,216]) {
+            let subdata = imageData.subdata(in: 6..<10)
+            let str = String(data: subdata, encoding: .ascii)
+            return str == "JFIF"
+        } else {
+            return false
+        }
+    }
+    
     private func imageToJPEG(with imageData: Data) -> Data? {
         if #available(iOS 10.0, *), let ciImage = CIImage(data: imageData), let colorSpace = ciImage.colorSpace {
             return CIContext().jpegRepresentation(
@@ -439,11 +449,17 @@ open class DKImageAssetExporter: DKImageBaseManager {
                                 }
                             }
                                                                                     
-                            if self.configuration.imageExportPreset == .compatible && self.isHEIC(with: imageData) {
-                                if let fileName = asset.fileName, let jpgData = self.imageToJPEG(with: imageData) {
-                                    imageData = jpgData
-                                    
-                                    if fileName.uppercased().hasSuffix(".HEIC") {
+                            if self.configuration.imageExportPreset == .compatible{
+                                if self.isHEIC(with: imageData) {
+                                    if let fileName = asset.fileName, let jpgData = self.imageToJPEG(with: imageData) {
+                                        imageData = jpgData
+                                        
+                                        if fileName.uppercased().hasSuffix(".HEIC") {
+                                            asset.fileName = fileName.dropLast(4) + "jpg"
+                                        }
+                                    }
+                                } else if self.isJPEG(with: imageData) {
+                                    if let fileName = asset.fileName, fileName.uppercased().hasSuffix(".HEIC") {
                                         asset.fileName = fileName.dropLast(4) + "jpg"
                                     }
                                 }
